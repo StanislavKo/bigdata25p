@@ -1,0 +1,15 @@
+default:
+  target: dev
+  outputs:
+    dev:
+      type: clickhouse
+      threads: 4
+      host: rc1b-aaaaaaaaaabbbbbbbddddddd.mdb.yandexcloud.net
+      port: 8443
+      user: bigdata25
+      password: aaaaaaaaaabbbbbbbdeeeeeeee
+      use_lw_deletes: true
+      schema: bigdata25
+      secure: True
+      verify: true
+

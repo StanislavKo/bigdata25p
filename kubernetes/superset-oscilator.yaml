@@ -1,0 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: superset-oscilator
+  namespace: default
+  labels:
+    app: superset-oscilator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: superset-oscilator
+  template:
+    metadata:
+      labels:
+        app: superset-oscilator
+    spec:
+      initContainers:
+      - name: init-wait-1
+        image: alpine:3.22.2
+        command: ["sh", "-c", "for i in $(seq 1 300); do nc -zvw1 kafka-broker-1 9092 && exit 0 || sleep 3; done; exit 1"]
+      - name: init-wait-2
+        image: alpine:3.22.2
+        command: ["sh", "-c", "for i in $(seq 1 300); do nc -zvw1 kafka-broker-2 9093 && exit 0 || sleep 3; done; exit 1"]
+      - name: init-wait-3
+        image: alpine:3.22.2
+        command: ["sh", "-c", "for i in $(seq 1 300); do nc -zvw1 kafka-broker-3 9094 && exit 0 || sleep 3; done; exit 1"]
+      volumes:
+      - name: host-folder-storage-superset-oscilator
+        hostPath:
+          path: /home/stanislav/k8s/25_11/superset
+          type: Directory
+      containers:
+      - name: superset-oscilator
+        image: stanislavko2/bigdata25_superset:4.1.4
+        imagePullPolicy: Always
+        resources:
+          requests:
+            memory: "2024Mi"
+            cpu: "250m"
+          limits:
+            memory: "2124Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: host-folder-storage-superset-oscilator
+          mountPath: /app/pythonpath/superset_config.py
+          subPath: superset_oscilator.py
+        - name: host-folder-storage-superset-oscilator
+          mountPath: /app/pythonpath/yandex_CA.pem
+          subPath: yandex_CA.pem
+        ports:
+        - containerPort: 8088
+        command:
+        - /bin/bash
+        - -c
+        - >
+          superset db upgrade &&
+          superset fab create-admin --username admin --firstname Admin --lastname User --email admin@admin.com --password admin &&
+          superset init &&
+          superset run -p 8088 --with-threads --reload --debugger
+        env:
+        - name: SUPERSET_ENV
+          value: "production"
+        - name: SUPERSET_SECRET_KEY
+          value: "qwerty"
+        - name: SUPERSET_CONFIG_PATH
+          value: "/app/pythonpath/superset_config.py"
+        - name: PYTHONPATH
+          value: "/app/pythonpath"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: superset-oscilator
+  namespace: default
+spec:
+  ports:
+  - port: 8088
+    targetPort: 8088
+  selector:
+    app: superset-oscilator
+  type: LoadBalancer

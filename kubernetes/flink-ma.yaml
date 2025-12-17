@@ -1,0 +1,173 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flink-ma-jobmanager-1
+  namespace: default
+  labels:
+    app: flink-ma-jobmanager-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flink-ma-jobmanager-1
+  template:
+    metadata:
+      labels:
+        app: flink-ma-jobmanager-1
+    spec:
+      hostname: flink-ma-jobmanager-1
+      initContainers:
+      - name: init-wait
+        image: alpine:3.22.2
+        command: ["sh", "-c", "for i in $(seq 1 300); do nc -zvw1 kafka-connect-ws-1 8083 && exit 0 || sleep 3; done; exit 1"]
+      volumes:
+      - name: flink-config-volume
+        configMap:
+          name: flink-config
+          items:
+          - key: config.yaml
+            path: config.yaml
+          - key: log4j-console.properties
+            path: log4j-console.properties
+          - key: log4j-cli.properties
+            path: log4j-cli.properties
+      - name: host-folder-storage-flink-ma-jobmanager
+        hostPath:
+          path: /home/stanislav/k8s/25_11/flink-ma
+          type: Directory
+      containers:
+      - name: flink-ma-jobmanager
+        image: flink:1.20.3-scala_2.12-java11
+        resources:
+          requests:
+            memory: "2024Mi"
+            cpu: "250m"
+          limits:
+            memory: "2024Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: flink-config-volume
+          mountPath: /opt/flink/conf
+        - name: host-folder-storage-flink-ma-jobmanager
+          mountPath: /data
+        ports:
+        - containerPort: 8084
+        - containerPort: 6123
+        - containerPort: 6124
+        command: ["/bin/bash", "-c", "/data/start_jobmanager.sh"]
+#        securityContext:
+#          runAsUser: 9999  # refers to user _flink_ from official flink image, change if necessary
+#        env:
+#        - name: JOB_MANAGER_RPC_ADDRESS
+#          value: flink-ma-jobmanager-1
+#        - name: FLINK_PROPERTIES
+#          value: |
+#            jobmanager.rpc.address: flink-ma-jobmanager-1
+#            rest.address: flink-ma-jobmanager-1
+#            rest.port: 8084
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flink-ma-jobmanager-1
+  namespace: default
+spec:
+  ports:
+  - name: rest
+    port: 8084
+    targetPort: 8084
+  - name: blob-server
+    port: 6124
+  - name: rpc
+    port: 6123
+    targetPort: 6123
+  selector:
+    app: flink-ma-jobmanager-1
+  type: ClusterIP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: flink-ma-taskmanager-1
+  namespace: default
+  labels:
+    app: flink-ma-taskmanager-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: flink-ma-taskmanager-1
+  template:
+    metadata:
+      labels:
+        app: flink-ma-taskmanager-1
+    spec:
+      hostname: flink-ma-taskmanager-1
+      initContainers:
+      - name: init-wait
+        image: alpine:3.22.2
+        command: ["sh", "-c", "for  i in $(seq 1 300); do nc -zvw1 flink-ma-jobmanager-1 8084 && exit 0 || sleep 3; done; exit 1"]
+      volumes:
+      - name: flink-config-volume
+        configMap:
+          name: flink-config
+          items:
+          - key: config.yaml
+            path: config.yaml
+          - key: log4j-console.properties
+            path: log4j-console.properties
+          - key: log4j-cli.properties
+            path: log4j-cli.properties
+      - name: host-folder-storage-flink-ma-taskmanager
+        hostPath:
+          path: /home/stanislav/k8s/25_11/flink-ma
+          type: Directory
+      containers:
+      - name: flink-ma-taskmanager
+        image: flink:1.20.3-scala_2.12-java11
+        resources:
+          requests:
+            memory: "2024Mi"
+            cpu: "250m"
+          limits:
+            memory: "2024Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: flink-config-volume
+          mountPath: /opt/flink/conf/
+        - name: host-folder-storage-flink-ma-taskmanager
+          mountPath: /data
+        ports:
+        - containerPort: 6122
+          name: rpc
+        - containerPort: 6121
+          name: metrics
+        command: ["/bin/bash", "-c", "/data/start_taskmanager.sh"]
+#        securityContext:
+#          runAsUser: 9999  # refers to user _flink_ from official flink image, change if necessary
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+#        env:
+#        - name: FLINK_PROPERTIES
+#          value: |
+#            jobmanager.rpc.address: flink-ma-jobmanager-1
+#            taskmanager.numberOfTaskSlots: 2
+#            parallelism.default: 2
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: flink-ma-taskmanager-1
+  namespace: default
+spec:
+  ports:
+  - name: rpc
+    port: 6122
+    targetPort: 6122
+  selector:
+    app: flink-ma-taskmanager-1
+  type: ClusterIP
+

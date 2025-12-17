@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: superset-oscilator-postgres
+  namespace: default
+  labels:
+    app: superset-oscilator-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: superset-oscilator-postgres
+  template:
+    metadata:
+      labels:
+        app: superset-oscilator-postgres
+    spec:
+      containers:
+      - name: superset-oscilator-postgres
+        image: postgres:14.20-alpine3.23
+        resources:
+          requests:
+            memory: "2024Mi"
+            cpu: "250m"
+          limits:
+            memory: "2024Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_USER
+          value: "superset"
+        - name: POSTGRES_PASSWORD
+          value: "asdf"
+        - name: POSTGRES_DB
+          value: "superset"
+        - name: DELME
+          value: "2"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: superset-oscilator-postgres
+  namespace: default 
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app: superset-oscilator-postgres

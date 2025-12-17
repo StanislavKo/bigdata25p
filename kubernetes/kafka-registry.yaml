@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: schema-registry-1
+  namespace: default
+  labels:
+    app: schema-registry-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: schema-registry-1
+  template:
+    metadata:
+      labels:
+        app: schema-registry-1
+    spec:
+      hostname: schema-registry-1
+      initContainers:
+      - name: init-wait
+        image: alpine:3.22.2
+        command: ["sh", "-c", "for i in $(seq 1 300); do nc -zvw1 kafka-ui 8082 && exit 0 || sleep 3; done; exit 1"]
+      containers:
+        - name: schema-registry
+          image: confluentinc/cp-schema-registry:7.3.2
+          resources:
+            requests:
+              memory: "3024Mi"
+              cpu: "250m"
+            limits:
+              memory: "3024Mi"
+              cpu: "500m"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081
+          env:
+            - name: KAFKA_HEAP_OPTS
+              value: "-Xms2772m -Xmx2772m"
+#            - name: SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL
+#              value: "zookeeper-1:2181"
+            - name: SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS
+              value: "kafka-broker-1:9092,kafka-broker-2:9093,kafka-broker-3:9094"
+            - name: SCHEMA_REGISTRY_HOST_NAME
+              value: schema-registry-1
+            - name: SCHEMA_REGISTRY_LISTENERS
+              value: http://0.0.0.0:8081
+            - name: SCHEMA_REGISTRY_LOG4J_ROOT_LOGLEVEL
+              value: DEBUG
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: schema-registry-1
+  namespace: default
+spec:
+  ports:
+  - name: external
+    port: 8081
+    targetPort: 8081
+  selector:
+    app: schema-registry-1
+  type: ClusterIP

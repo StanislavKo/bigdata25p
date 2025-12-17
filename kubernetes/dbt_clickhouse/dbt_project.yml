@@ -1,0 +1,10 @@
+name: "clickhouse_aggregation"
+version: "1.0"
+profile: "default"
+
+models:
+  clickhouse_aggregation:
+    staging:
+      materialized: view
+    mart:
+      materialized: table

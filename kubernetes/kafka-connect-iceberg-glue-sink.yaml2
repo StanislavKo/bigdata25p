@@ -1,0 +1,115 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-connect-iceberg-glue-sink
+  namespace: default
+  labels:
+    app: kafka-connect-iceberg-glue-sink
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-connect-iceberg-glue-sink
+  template:
+    metadata:
+      labels:
+        app: kafka-connect-iceberg-glue-sink
+    spec:
+      hostname: kafka-connect-iceberg-glue-sink
+      initContainers:
+      - name: init-wait
+        image: alpine:3.22.2
+        command: ["sh", "-c", "for i in $(seq 1 300); do nc -zvw1 schema-registry-1 8081 && exit 0 || sleep 3; done; exit 1"]
+      volumes:
+      - name: host-folder-storage-iceberg
+        hostPath:
+          path: /home/stanislav/k8s/25_11/kafka_connect
+          type: Directory
+      - name: host-folder-storage-iceberg-zip
+        hostPath:
+          path: /home/stanislav/k8s/25_11/kafka_connect_iceberg
+          type: Directory
+#      - name: jars
+#        hostPath:
+#          path: /home/stanislav/k8s/25_11/kafka_connect/connect-iceberg-sink-jars-base
+#          type: Directory
+      containers:
+      - name: kafka-connect
+        image: confluentinc/cp-kafka-connect:7.3.2
+        resources:
+          requests:
+            memory: "3024Mi"
+            cpu: "250m"
+          limits:
+            memory: "3024Mi"
+            cpu: "500m"
+        volumeMounts:
+        - name: host-folder-storage-iceberg
+          mountPath: /data
+        - name: host-folder-storage-iceberg-zip
+          mountPath: /data_iceberg
+#        - name: jars
+#          mountPath: /usr/share/java/my-jars
+        ports:
+        - containerPort: 8083
+        - containerPort: 28083
+#        volumeMounts:
+#          - mountPath: "/data"
+#            name: connector-pv-storage
+        command: ["/bin/bash", "-c", "/data/connect-iceberg-glue-sink-jars/start.sh"]
+        env:
+        - name: KAFKA_HEAP_OPTS
+          value: "-Xms2872m -Xmx2872m"
+        - name: CONNECT_BOOTSTRAP_SERVERS
+          value: "kafka-broker-1:9092,kafka-broker-2:9093,kafka-broker-3:9094"
+        - name: CONNECT_REST_PORT
+          value: "8083"
+        - name: CONNECT_GROUP_ID
+          value: "CONNECT_GROUP_ID_iceberg-glue-sink-09"
+        - name: CONNECT_CONFIG_STORAGE_TOPIC
+          value: "_connect-configs-iceberg-glue-sink"
+        - name: CONNECT_OFFSET_STORAGE_TOPIC
+          value: "_connect-offsets-iceberg-glue-sink"
+        - name: CONNECT_STATUS_STORAGE_TOPIC
+          value: "_connect-status-iceberg-glue-sink"
+        - name: CONNECT_KEY_CONVERTER
+          value: "org.apache.kafka.connect.storage.StringConverter"
+        - name: CONNECT_VALUE_CONVERTER
+          value: "org.apache.kafka.connect.storage.StringConverter"
+        - name: CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL
+          value: "http://schema-registry-1:8081"
+        - name: CONNECT_REST_ADVERTISED_HOST_NAME
+          value: "kafka-connect-iceberg-glue-sink"
+        - name: CONNECT_LOG4J_APPENDER_STDOUT_LAYOUT_CONVERSIONPATTERN
+          value: "[%d] %p %X{connector.context}%m (%c:%L)%n"
+        - name: CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR
+          value: "1"
+        - name: CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR
+          value: "1"
+        - name: CONNECT_STATUS_STORAGE_REPLICATION_FACTOR
+          value: "1"
+        - name: CONNECT_LOG4J_ROOT_LOGLEVEL
+          value: "INFO"
+        - name: CONNECT_PLUGIN_PATH
+          value: "/usr/share/java,/usr/share/confluent-hub-components,/data/connect-iceberg-glue-sink-jars"
+        - name: AWS_ACCESS_KEY_ID
+          value: "AAAAAABBBBBBFFFFFFFFF"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "AAAAAAAAAAAAAABBBBBBBBBBBBBBGGGGGGGGGGGGGGGG"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-connect-iceberg-glue-sink
+  namespace: default
+spec:
+  ports:
+  - name: external
+    port: 8083
+    targetPort: 8083
+  - name: internal
+    port: 28083
+    targetPort: 28083
+  selector:
+    app: kafka-connect-iceberg-glue-sink
+  type: ClusterIP

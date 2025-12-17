@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: spark-worker
+  namespace: default
+  labels:
+    app: spark-worker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: spark-worker
+  template:
+    metadata:
+      labels:
+        app: spark-worker
+    spec:
+#      hostname: spark-worker
+      initContainers:
+      - name: init-wait-1
+        image: alpine:3.22.2
+        command: ["sh", "-c", "for i in $(seq 1 300); do nc -zvw1 spark-master 8087 && exit 0 || sleep 3; done; exit 1"]
+      volumes:
+      - name: host-folder-storage-spark
+        hostPath:
+          path: /home/stanislav/k8s/25_11/spark
+          type: Directory
+      - name: host-folder-storage-spark-runtime
+        hostPath:
+          path: /home/stanislav/k8s/25_11/spark_runtime
+          type: Directory
+      containers:
+      - name: spark-worker
+        image: stanislavko2/bigdata25_spark:3.5.7
+        imagePullPolicy: Always
+        resources:
+          requests:
+            memory: "2500Mi"
+            cpu: "2100m"
+          limits:
+            memory: "2500Mi"
+            cpu: "2100m"
+        volumeMounts:
+        - name: host-folder-storage-spark
+          mountPath: /opt/spark/my_jars
+        - name: host-folder-storage-spark
+          mountPath: /opt/spark/jars/spark-iceberg-1.0.0.jar
+          subPath: spark-iceberg-1.0.0.jar
+        - name: host-folder-storage-spark
+          mountPath: /opt/spark/jars/spark-clickhouse-source-1.0.0.jar
+          subPath: spark-clickhouse-source-1.0.0.jar
+        - name: host-folder-storage-spark
+          mountPath: /opt/spark/jars/spark-clickhouse-sink-1.0.0.jar
+          subPath: spark-clickhouse-sink-1.0.0.jar
+        - name: host-folder-storage-spark-runtime
+          mountPath: /opt/spark/jars/iceberg-spark-runtime-3.5_2.12-1.9.0-SNAPSHOT.jar
+          subPath: iceberg-spark-runtime-3.5_2.12-1.9.0-SNAPSHOT.jar
+        - name: host-folder-storage-spark-runtime
+          mountPath: /opt/spark/jars/iceberg-aws-bundle-1.9.0.jar
+          subPath: iceberg-aws-bundle-1.9.0.jar
+        - name: host-folder-storage-spark-runtime
+          mountPath: /opt/spark/jars/clickhouse-spark-runtime-3.5_2.13-0.9.0.jar
+          subPath: clickhouse-spark-runtime-3.5_2.13-0.9.0.jar
+        - name: host-folder-storage-spark-runtime
+          mountPath: /opt/spark/jars/clickhouse-jdbc-0.9.0.jar
+          subPath: clickhouse-jdbc-0.9.0.jar
+        command:
+        - /bin/bash
+        - -c
+        - >
+          /opt/spark/sbin/start-worker-my.sh  spark://spark-master:7077 && tail -f /dev/null
+        env:
+        - name: SPARK_MASTER_HOST
+          value: "spark-master"
+        - name: SPARK_MASTER_PORT
+          value: "7077"
+        - name: SPARK_WORKER_PORT
+          value: "4040"
+        - name: SPARK_WORKER_MEMORY
+          value: "2403m"
+#        - name: SPARK_WORKER_INSTANCES
+#          value: "1"
+#        - name: SPARK_EXECUTOR_MEMORY
+#          value: "800m"
+#        - name: SPARK_EXECUTOR_CORES
+#          value: "1"
+        - name: AWS_ACCESS_KEY_ID
+          value: "AAAAAABBBBBBFFFFFFFFF"
+        - name: AWS_SECRET_ACCESS_KEY
+          value: "AAAAAAAAAAAAAABBBBBBBBBBBBBBGGGGGGGGGGGGGGGG"
+        - name: AWS_REGION
+          value: "ap-northeast-2"
+        - name: DELME
+          value: "1"
+

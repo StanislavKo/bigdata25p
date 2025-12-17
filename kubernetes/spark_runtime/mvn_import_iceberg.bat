@@ -1,0 +1,1 @@
+mvn install:install-file -Dfile=iceberg-spark-runtime-3.5_2.12-1.9.0-SNAPSHOT.jar -DgroupId=org.apache.iceberg -DartifactId=iceberg-spark -Dversion=3.5_2.12-1.9.0-SNAPSHOT -Dpackaging=jar

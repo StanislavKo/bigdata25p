@@ -1,0 +1,1 @@
+"c:\Program Files\Java\jdk-17\bin\keytool.exe" -genkey -alias mydomain -keyalg RSA -keystore trino.client.truststore.jks  -keysize 2048

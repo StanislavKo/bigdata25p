@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  trino:
+    image: stanislavko2/bigdata25_trino:479-amd64
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./catalog/clickhouse.properties:/etc/trino/catalog/clickhouse.properties
+      - ./cert/yandex_CA.pem:/etc/trino/ssl/yandex_CA.pem
+      - ./cert/trino.client.truststore.jks:/etc/trino/ssl/trino.client.truststore.jks
+      - ./jvm/jvm.config:/etc/trino/jvm.config

@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: airflow-postgres
+  namespace: default
+  labels:
+    app: airflow-postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: airflow-postgres
+  template:
+    metadata:
+      labels:
+        app: airflow-postgres
+    spec:
+      containers:
+      - name: airflow-postgres
+        image: postgres:16.11-alpine3.23
+        resources:
+          requests:
+            memory: "2024Mi"
+            cpu: "250m"
+          limits:
+            memory: "2024Mi"
+            cpu: "500m"
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_USER
+          value: "airflow"
+        - name: POSTGRES_PASSWORD
+          value: "airflow"
+        - name: POSTGRES_DB
+          value: "airflow"
+        - name: DELME
+          value: "2"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: airflow-postgres
+  namespace: default 
+spec:
+  ports:
+  - port: 5432
+    targetPort: 5432
+  selector:
+    app: airflow-postgres

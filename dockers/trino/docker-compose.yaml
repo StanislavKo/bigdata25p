@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  trino:
+    image: stanislavko2/bigdata25_trino:479-amd64
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./catalog/clickhouse.properties:/etc/trino/catalog/clickhouse.properties

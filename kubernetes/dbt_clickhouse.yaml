@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dbt-clickhouse-1
+  namespace: default
+  labels:
+    app: dbt-clickhouse-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dbt-clickhouse-1
+  template:
+    metadata:
+      labels:
+        app: dbt-clickhouse-1
+    spec:
+      hostname: dbt-clickhouse-1
+      initContainers:
+      - name: init-wait
+        image: alpine:3.22.2
+        command: ["sh", "-c", "for i in $(seq 1 300); do nc -zvw1 kafka-connect-clickhouse-sink-1 8085 && exit 0 || sleep 3; done; exit 1"]
+      volumes:
+      - name: host-folder-storage-dbt-clickhouse
+        hostPath:
+          path: /home/stanislav/k8s/25_11/dbt_clickhouse
+          type: Directory
+      containers:
+      - name: dbt-clickhouse
+        image: stanislavko2/bigdata25_dbt_clickhouse:1.9.7
+        resources:
+          requests:
+            memory: "2024Mi"
+            cpu: "350m"
+          limits:
+            memory: "2024Mi"
+            cpu: "650m"
+        volumeMounts:
+        - name: host-folder-storage-dbt-clickhouse
+          mountPath: /usr/app/profiles.yml
+          subPath: profiles.yml
+        - name: host-folder-storage-dbt-clickhouse
+          mountPath: /usr/app/dbt_project.yml
+          subPath: dbt_project.yml
+        - name: host-folder-storage-dbt-clickhouse
+          mountPath: /usr/app/models/staging/stg_source_table.sql
+          subPath: stg_source_table.sql
+        - name: host-folder-storage-dbt-clickhouse
+          mountPath: /usr/app/models/mart/ma_oscilator.sql
+          subPath: ma_oscilator.sql
+        - name: host-folder-storage-dbt-clickhouse
+          mountPath: /usr/app/yandex_CA.pem
+          subPath: yandex_CA.pem
+

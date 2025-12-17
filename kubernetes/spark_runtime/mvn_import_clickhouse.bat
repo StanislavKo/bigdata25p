@@ -1,0 +1,1 @@
+mvn install:install-file -Dfile=clickhouse-spark-runtime-3.5_2.12-0.9.0-SNAPSHOT.jar -DgroupId=com.clickhouse.spark -DartifactId=clickhouse-spark-runtime-3.5_2.12 -Dversion=0.9.0 -Dpackaging=jar

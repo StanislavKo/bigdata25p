@@ -1,0 +1,1 @@
+mvn archetype:generate -DarchetypeGroupId=io.confluent.maven -DarchetypeArtifactId=kafka-connect-quickstart -DarchetypeVersion=0.10.0.0 -Dpackage=com.hwn.bd25.kafkaconnectwssource -DgroupId=com.hwn.bd25 -DartifactId=kafka-connect-ws-source -Dversion=1.0.0
